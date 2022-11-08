@@ -10,12 +10,13 @@ import SpriteKit
 import GameplayKit
 
 class ViewController: NSViewController {
-
+    
     @IBOutlet var skView: SKView!
+    var mouseLocation: NSPoint? { self.view.window?.mouseLocationOutsideOfEventStream }
     
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        
         if let view = self.skView {
             // Load the SKScene from 'GameScene.sks'
             if let scene = SKScene(fileNamed: "GameScene") {
@@ -25,7 +26,6 @@ class ViewController: NSViewController {
                 // Present the scene
                 view.presentScene(scene)
             }
-            
             view.ignoresSiblingOrder = true
             
             view.showsFPS = true

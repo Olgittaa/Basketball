@@ -1,64 +1,88 @@
-//
-//  GameScene.swift
-//  Delo
-//
-//  Created by Ольга Чарная on 10.10.2022.
-//
-
 import SpriteKit
 import GameplayKit
 
 class GameScene: SKScene {
+    var x = 0.0
+    var y = 0.0
+    var v = 0.0
+    var vx = 0.0
+    var vy = 0.0
     
-    private var label : SKLabelNode?
-    private var spinnyNode : SKShapeNode?
+    var dx = 0.0
+    var dy = 0.0
     
-    override func didMove(to view: SKView) {
+    var ax = 0.0
+    var ay = -200.0
+    var lastT = TimeInterval()
+    var dt = 0.0
+    var moved = false
+    
+    var path = [CGPoint(x: 10, y: 10), CGPoint(x: 100, y: 100)]
+    
+    func drawArrow(){
+        deleteLines()
+        computeArrowPosition()
         
-        // Get label node from scene and store it for use later
-        self.label = self.childNode(withName: "//helloLabel") as? SKLabelNode
-        if let label = self.label {
-            label.alpha = 0.0
-            label.run(SKAction.fadeIn(withDuration: 2.0))
-        }
+        let dr = SKShapeNode(splinePoints: &path, count: 2)
+        dr.name = "line"
+        dr.lineWidth = 3
+        dr.fillColor = .white
+        addChild(dr)
+    }
+    
+    
+    fileprivate func computeArrowPosition() {
+        path[0] = childNode(withName: "ball")!.position
         
-        // Create shape node to use during mouse interaction
-        let w = (self.size.width + self.size.height) * 0.05
-        self.spinnyNode = SKShapeNode.init(rectOf: CGSize.init(width: w, height: w), cornerRadius: w * 0.3)
-        
-        if let spinnyNode = self.spinnyNode {
-            spinnyNode.lineWidth = 2.5
-            
-            spinnyNode.run(SKAction.repeatForever(SKAction.rotate(byAngle: CGFloat(Double.pi), duration: 1)))
-            spinnyNode.run(SKAction.sequence([SKAction.wait(forDuration: 0.5),
-                                              SKAction.fadeOut(withDuration: 0.5),
-                                              SKAction.removeFromParent()]))
+    }
+    
+    fileprivate func deleteLines() {
+        children.forEach{ node in
+            if node.name == "line"{
+                node.removeFromParent()
+            }
         }
     }
     
     
+    override func didMove(to view: SKView) {
+        path[0] = childNode(withName: "ball")!.position
+        x = path[0].x
+        y = path[0].y
+    }
+    
     func touchDown(atPoint pos : CGPoint) {
-        if let n = self.spinnyNode?.copy() as! SKShapeNode? {
-            n.position = pos
-            n.strokeColor = SKColor.green
-            self.addChild(n)
+        moved = false
+        x = path[0].x
+        y = path[0].y
+        drawBall()
+        path[1] = pos
+        drawArrow()
+        
+        if let shapeNode = childNode(withName: "ball") as? SKShapeNode {
+            shapeNode.fillColor = .orange
         }
     }
     
     func touchMoved(toPoint pos : CGPoint) {
-        if let n = self.spinnyNode?.copy() as! SKShapeNode? {
-            n.position = pos
-            n.strokeColor = SKColor.blue
-            self.addChild(n)
-        }
+        path[1] = pos
+        drawArrow()
     }
     
     func touchUp(atPoint pos : CGPoint) {
-        if let n = self.spinnyNode?.copy() as! SKShapeNode? {
-            n.position = pos
-            n.strokeColor = SKColor.red
-            self.addChild(n)
-        }
+        deleteLines()
+        shoot()
+    }
+    
+    func drawBall(){
+        childNode(withName: "ball")?.position = CGPoint(x: x, y: y)
+    }
+    
+    func shoot(){
+        moved = true
+        let r = sqrt(pow(path[0].x.distance(to: path[1].x), 2) + pow(path[0].y.distance(to: path[1].y), 2)) * 2
+        vx = path[1].x.distance(to: path[0].x) * r / 100
+        vy = path[1].y.distance(to: path[0].y) * r / 100
     }
     
     override func mouseDown(with event: NSEvent) {
@@ -73,19 +97,37 @@ class GameScene: SKScene {
         self.touchUp(atPoint: event.location(in: self))
     }
     
-    override func keyDown(with event: NSEvent) {
-        switch event.keyCode {
-        case 0x31:
-            if let label = self.label {
-                label.run(SKAction.init(named: "Pulse")!, withKey: "fadeInOut")
-            }
-        default:
-            print("keyDown: \(event.characters!) keyCode: \(event.keyCode)")
+    
+    override func update(_ currentTime: TimeInterval) {
+        dt = currentTime - lastT
+        lastT = currentTime
+        move()
+        drawBall()
+    }
+    
+    func move(){
+        if moved && checkPosition(){
+            vx = vx + ax * dt
+            vy = vy + ay * dt
+            x = x + vx * dt
+            y = y + vy * dt
         }
     }
     
-    
-    override func update(_ currentTime: TimeInterval) {
-        // Called before each frame is rendered
+    func checkPosition() -> Bool{
+        let ball = childNode(withName: "ball")!
+        let kos = childNode(withName: "basket")!
+        
+        if kos.position.x - 10.0 < ball.position.x && ball.position.x < kos.position.x + 10.0 && kos.position.y - 10.0 < ball.position.y && ball.position.y < kos.position.y {
+            if let shapeNode = ball as? SKShapeNode {
+                shapeNode.fillColor = .green
+            }
+            return false
+        }
+        
+        if ball.position.y < -271.0 {
+            return false
+        }
+        return true
     }
 }
